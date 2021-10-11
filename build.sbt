@@ -6,18 +6,18 @@ licenses := Seq(("CC0", url("https://creativecommons.org/publicdomain/zero/1.0")
 
 scalaVersion := "2.13.5"
 
-Compile / scalacOptions ++= Seq(
-  "-target:11",
-  "-deprecation",
-  "-feature",
-  "-unchecked",
-  "-Xlog-reflective-calls",
-  "-Xlint")
-Compile / javacOptions ++= Seq("-Xlint:unchecked", "-Xlint:deprecation")
+//Compile / scalacOptions ++= Seq(
+//  "-target:11",
+//  "-deprecation",
+//  "-feature",
+//  "-unchecked",
+//  "-Xlog-reflective-calls",
+//  "-Xlint")
+//Compile / javacOptions ++= Seq("-Xlint:unchecked", "-Xlint:deprecation")
 
-Test / parallelExecution := false
-Test / testOptions += Tests.Argument("-oDF")
-Test / logBuffered := false
+//Test / parallelExecution := false
+//Test / testOptions += Tests.Argument("-oDF")
+//Test / logBuffered := false
 
 run / fork := false
 Global / cancelable := false // ctrl-c
