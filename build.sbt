@@ -23,9 +23,9 @@ run / fork := false
 Global / cancelable := false // ctrl-c
 
 val AkkaVersion = "2.6.16"
-val AkkaHttpVersion = "10.2.4"
-val AkkaManagementVersion = "1.0.10"
-val AkkaPersistenceJdbcVersion = "5.0.0"
+val AkkaHttpVersion = "10.2.6"
+val AkkaManagementVersion = "1.1.1"
+val AkkaPersistenceJdbcVersion = "5.0.2"
 val AlpakkaKafkaVersion = "2.0.7"
 val AkkaProjectionVersion = "1.2.2"
 val ScalikeJdbcVersion = "3.5.0"
@@ -55,8 +55,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-discovery" % AkkaVersion,
   // Common dependencies for logging and testing
   "com.typesafe.akka" %% "akka-slf4j" % AkkaVersion,
-  "ch.qos.logback" % "logback-classic" % "1.2.3",
-  "org.scalatest" %% "scalatest" % "3.1.2" % Test,
+  "ch.qos.logback" % "logback-classic" % "1.2.6",
+  "org.scalatest" %% "scalatest" % "3.2.9" % Test,
   // 2. Using gRPC and/or protobuf
   "com.typesafe.akka" %% "akka-http2-support" % AkkaHttpVersion,
   // 3. Using Akka Persistence
