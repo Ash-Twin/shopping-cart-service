@@ -1,6 +1,6 @@
 syntax = "proto3";
 option java_multiple_files = true;
-option java_package= "shopping.cart.proto";
+option java_package = "shopping.cart.proto";
 
 package shopping.cart;
 
@@ -8,6 +8,8 @@ package shopping.cart;
 
 service ShoppingCartService {
   rpc AddItem (AddItemRequest) returns (Cart) {}
+  rpc Get (GetCartRequest) returns(Cart) {}
+  rpc Checkout(CheckoutRequest)returns(Cart){}
 }
 
 message AddItemRequest {
@@ -15,8 +17,15 @@ message AddItemRequest {
   string itemId = 2;
   int32 quantity = 3;
 }
+message GetCartRequest{
+  string cartId = 1;
+}
+message CheckoutRequest{
+  string cartId = 1;
+}
 message Cart {
   repeated Item items = 1;
+  bool isCheckedOut = 2;
 }
 message Item {
   string itemId = 1;

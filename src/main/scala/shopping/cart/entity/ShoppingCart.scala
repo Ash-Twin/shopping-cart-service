@@ -1,20 +1,12 @@
 package shopping.cart.entity
 
-import akka.actor.typed.{ ActorRef, ActorSystem, Behavior, SupervisorStrategy }
+import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.{ActorRef, ActorSystem, Behavior, SupervisorStrategy}
 import akka.cluster.sharding.typed.ShardingEnvelope
-import akka.cluster.sharding.typed.scaladsl.{
-  ClusterSharding,
-  Entity,
-  EntityTypeKey
-}
+import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityTypeKey}
 import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
-import akka.persistence.typed.scaladsl.{
-  Effect,
-  EventSourcedBehavior,
-  ReplyEffect,
-  RetentionCriteria
-}
+import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
 import shopping.cart.CborSerializable
 
 import java.time.Instant
@@ -29,8 +21,10 @@ object ShoppingCart {
       quantity: Int,
       replyTo: ActorRef[StatusReply[Summary]])
       extends Command
-  case class Summary(items: Map[String, Int],isCheckedOut:Boolean = false) extends CborSerializable
+  case class Summary(items: Map[String, Int], isCheckedOut: Boolean = false)
+      extends CborSerializable
   case class Checkout(replyTo: ActorRef[StatusReply[Summary]]) extends Command
+  case class Get(replyTo:ActorRef[Summary])extends Command
   sealed trait Event extends CborSerializable
   case class ItemAdded(cartId: String, itemId: String, quantity: Int)
       extends Event
@@ -57,7 +51,7 @@ object ShoppingCart {
       }
     }
     def toSummary: Summary = {
-      Summary(items,isCheckedOut)
+      Summary(items, isCheckedOut)
     }
   }
   object State {
@@ -65,7 +59,7 @@ object ShoppingCart {
   }
 
   /** Command Handler */
-  private def handleCommand(
+  private def openShoppingCart(
       cartId: String,
       command: Command,
       state: State): ReplyEffect[Event, State] = {
@@ -98,7 +92,22 @@ object ShoppingCart {
             checkedOutCart => StatusReply.success(checkedOutCart.toSummary)
           }
         }
+      case Get(replyTo) =>
+        Effect.reply(replyTo)(state.toSummary)
     }
+  }
+  private def checkedOutShoppingCart(
+      cartId: String,
+      command: Command,
+      state: State): ReplyEffect[Event, State] = {
+    command match {
+      case AddItem(_, _, replyTo) =>
+        Effect.reply(replyTo)(
+          StatusReply.error("Cannot add item into checked out shopping cart!"))
+      case Checkout(replyTo) =>
+        Effect.reply(replyTo)(StatusReply.error("Cart already checked out!"))
+    }
+
   }
 
   /** Event Handler */
@@ -118,7 +127,7 @@ object ShoppingCart {
         persistenceId = PersistenceId(EntityKey.name, cartId),
         emptyState = State.empty,
         commandHandler =
-          (state, command) => handleCommand(cartId, command, state),
+          (state, command) => openShoppingCart(cartId, command, state),
         eventHandler = (state, event) => handleEvent(event, state))
       .withRetention(RetentionCriteria
         .snapshotEvery(numberOfEvents = 100, keepNSnapshots = 3))
