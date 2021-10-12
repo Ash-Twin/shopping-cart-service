@@ -1,13 +1,23 @@
 package shopping.cart.entity
 
-import akka.actor.typed.{ActorRef, ActorSystem, Behavior, SupervisorStrategy}
+import akka.actor.typed.{ ActorRef, ActorSystem, Behavior, SupervisorStrategy }
 import akka.cluster.sharding.typed.ShardingEnvelope
-import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityTypeKey}
+import akka.cluster.sharding.typed.scaladsl.{
+  ClusterSharding,
+  Entity,
+  EntityTypeKey
+}
 import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
-import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
+import akka.persistence.typed.scaladsl.{
+  Effect,
+  EventSourcedBehavior,
+  ReplyEffect,
+  RetentionCriteria
+}
 import shopping.cart.CborSerializable
 
+import java.time.Instant
 import scala.concurrent.duration.DurationInt
 
 object ShoppingCart {
@@ -19,12 +29,20 @@ object ShoppingCart {
       quantity: Int,
       replyTo: ActorRef[StatusReply[Summary]])
       extends Command
-  case class Summary(items: Map[String, Int]) extends CborSerializable
-
+  case class Summary(items: Map[String, Int],isCheckedOut:Boolean = false) extends CborSerializable
+  case class Checkout(replyTo: ActorRef[StatusReply[Summary]]) extends Command
   sealed trait Event extends CborSerializable
   case class ItemAdded(cartId: String, itemId: String, quantity: Int)
       extends Event
-  final case class State(items: Map[String, Int]) extends CborSerializable {
+  case class CheckedOut(cartId: String, instant: Instant) extends Event
+  final case class State(items: Map[String, Int], checkoutDate: Option[Instant])
+      extends CborSerializable {
+    def isCheckedOut: Boolean = {
+      checkoutDate.isDefined
+    }
+    def checkout(now: Instant): State = {
+      copy(checkoutDate = Some(now))
+    }
     def hasItem(itemId: String): Boolean = {
       items.contains(itemId)
     }
@@ -38,9 +56,12 @@ object ShoppingCart {
         case _ => copy(items = items + (itemId -> quantity))
       }
     }
+    def toSummary: Summary = {
+      Summary(items,isCheckedOut)
+    }
   }
   object State {
-    val empty: State = State(items = Map.empty)
+    val empty: State = State(items = Map.empty, checkoutDate = None)
   }
 
   /** Command Handler */
@@ -56,18 +77,27 @@ object ShoppingCart {
               .persist(
                 ItemAdded(cartId, itemId, quantity + state.items(itemId)))
               .thenReply(replyTo) { updatedCart =>
-                StatusReply.success(Summary(updatedCart.items))
+                StatusReply.success(updatedCart.toSummary)
               }
           } else {
             Effect
               .persist(ItemAdded(cartId, itemId, quantity))
               .thenReply(replyTo) { updatedCart =>
-                StatusReply.success(Summary(updatedCart.items))
+                StatusReply.success(updatedCart.toSummary)
               }
           }
         } else
           Effect.reply(replyTo)(
             StatusReply.error("Quantity must be greater than 0!"))
+      case Checkout(replyTo) =>
+        if (state.isEmpty) {
+          Effect.reply(replyTo)(
+            StatusReply.error("Cannot checkout empty cart!"))
+        } else {
+          Effect.persist(CheckedOut(cartId, Instant.now())).thenReply(replyTo) {
+            checkedOutCart => StatusReply.success(checkedOutCart.toSummary)
+          }
+        }
     }
   }
 
@@ -76,6 +106,8 @@ object ShoppingCart {
     event match {
       case ItemAdded(_, itemId, quantity) =>
         state.updateItem(itemId, quantity)
+      case CheckedOut(_, instant) =>
+        state.checkout(instant)
     }
   }
 
