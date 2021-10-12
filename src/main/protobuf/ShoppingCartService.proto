@@ -10,6 +10,7 @@ service ShoppingCartService {
   rpc AddItem (AddItemRequest) returns (Cart) {}
   rpc Get (GetCartRequest) returns(Cart) {}
   rpc Checkout(CheckoutRequest)returns(Cart){}
+  rpc GetItemPopularity(GetItemPopularityRequest)returns(GetItemPopularityResponse){}
 }
 
 message AddItemRequest {
@@ -22,6 +23,13 @@ message GetCartRequest{
 }
 message CheckoutRequest{
   string cartId = 1;
+}
+message GetItemPopularityRequest{
+  string itemId = 1;
+}
+message GetItemPopularityResponse{
+  string itemId = 1;
+  int64 popularity = 2;
 }
 message Cart {
   repeated Item items = 1;

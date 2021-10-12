@@ -1,12 +1,21 @@
 package shopping.cart.entity
 
-import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.{ActorRef, ActorSystem, Behavior, SupervisorStrategy}
+import akka.actor.typed.{ ActorRef, ActorSystem, Behavior, SupervisorStrategy }
 import akka.cluster.sharding.typed.ShardingEnvelope
-import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityTypeKey}
+import akka.cluster.sharding.typed.scaladsl.{
+  ClusterSharding,
+  Entity,
+  EntityContext,
+  EntityTypeKey
+}
 import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
-import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
+import akka.persistence.typed.scaladsl.{
+  Effect,
+  EventSourcedBehavior,
+  ReplyEffect,
+  RetentionCriteria
+}
 import shopping.cart.CborSerializable
 
 import java.time.Instant
@@ -24,7 +33,7 @@ object ShoppingCart {
   case class Summary(items: Map[String, Int], isCheckedOut: Boolean = false)
       extends CborSerializable
   case class Checkout(replyTo: ActorRef[StatusReply[Summary]]) extends Command
-  case class Get(replyTo:ActorRef[Summary])extends Command
+  case class Get(replyTo: ActorRef[Summary]) extends Command
   sealed trait Event extends CborSerializable
   case class ItemAdded(cartId: String, itemId: String, quantity: Int)
       extends Event
@@ -121,7 +130,7 @@ object ShoppingCart {
   }
 
   /** Core EventSourcedBehavior */
-  def apply(cartId: String): Behavior[Command] =
+  def apply(cartId: String, tag: String): Behavior[Command] =
     EventSourcedBehavior
       .withEnforcedReplies[Command, Event, State](
         persistenceId = PersistenceId(EntityKey.name, cartId),
@@ -129,6 +138,7 @@ object ShoppingCart {
         commandHandler =
           (state, command) => openShoppingCart(cartId, command, state),
         eventHandler = (state, event) => handleEvent(event, state))
+      .withTagger(_ => Set(tag))
       .withRetention(RetentionCriteria
         .snapshotEvery(numberOfEvents = 100, keepNSnapshots = 3))
       .onPersistFailure(
@@ -137,9 +147,16 @@ object ShoppingCart {
   /** Cluster sharding */
   val EntityKey: EntityTypeKey[Command] = EntityTypeKey[Command]("ShoppingCart")
 
+  /** Cart identifiers */
+  val tags: Seq[String] = Vector.tabulate(5)(i => s"cart-$i")
+
   def init(system: ActorSystem[_]): ActorRef[ShardingEnvelope[Command]] = {
-    ClusterSharding(system).init(entity = Entity(EntityKey) { entityContext =>
-      ShoppingCart(entityContext.entityId)
-    })
+    val behaviorFactory: EntityContext[Command] => Behavior[Command] =
+      entityContext => {
+        val i = math.abs(entityContext.entityId.hashCode % tags.size)
+        val selectedTag = tags(i)
+        ShoppingCart(entityContext.entityId, selectedTag)
+      }
+    ClusterSharding(system).init(entity = Entity(EntityKey)(behaviorFactory))
   }
 }

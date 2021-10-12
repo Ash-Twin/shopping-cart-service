@@ -4,7 +4,7 @@ import scalikejdbc.{ scalikejdbcSQLInterpolationImplicitDef, DBSession }
 import shopping.cart.repository.ItemPopularityRepository
 import shopping.cart.repository.scalike.ScalikeJdbcSession
 
-object ItemPopularityRepositoryImpl extends ItemPopularityRepository {
+class ItemPopularityRepositoryImpl extends ItemPopularityRepository {
   override def update(
       session: ScalikeJdbcSession,
       itemId: String,

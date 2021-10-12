@@ -7,6 +7,11 @@ import akka.management.scaladsl.AkkaManagement
 import org.slf4j.LoggerFactory
 import shopping.cart.entity.ShoppingCart
 import shopping.cart.impl.ShoppingCartServiceImpl
+import shopping.cart.repository.impl.{
+  ItemPopularityProjection,
+  ItemPopularityRepositoryImpl
+}
+import shopping.cart.repository.scalike.ScalikeJdbcSetup
 
 import scala.util.control.NonFatal
 
@@ -32,8 +37,11 @@ object Main {
       system.settings.config.getString("shopping-cart-service.grpc.interface")
     val grpcPort =
       system.settings.config.getInt("shopping-cart-service.grpc.port")
-    val grpcService = new ShoppingCartServiceImpl(system)
+    val itemPopularityRepository = new ItemPopularityRepositoryImpl()
+    val grpcService = new ShoppingCartServiceImpl(system,itemPopularityRepository)
     ShoppingCart.init(system)
+    ScalikeJdbcSetup.init(system)
+    ItemPopularityProjection.init(system, itemPopularityRepository)
     ShoppingCartServer.start(grpcInterface, grpcPort, system, grpcService)
   }
 }
