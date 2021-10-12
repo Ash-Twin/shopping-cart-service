@@ -1,15 +1,19 @@
-package shopping.cart.repository
+package shopping.cart.repository.scalike
 
 import akka.actor.typed.ActorSystem
 import com.typesafe.config.Config
 import com.zaxxer.hikari.HikariDataSource
-import scalikejdbc.ConnectionPool
-import scalikejdbc.DataSourceCloser
-import scalikejdbc.DataSourceConnectionPool
-import scalikejdbc.config.DBs
-import scalikejdbc.config.NoEnvPrefix
-import scalikejdbc.config.TypesafeConfig
-import scalikejdbc.config.TypesafeConfigReader
+import scalikejdbc.config.{
+  DBs,
+  NoEnvPrefix,
+  TypesafeConfig,
+  TypesafeConfigReader
+}
+import scalikejdbc.{
+  ConnectionPool,
+  DataSourceCloser,
+  DataSourceConnectionPool
+}
 
 object ScalikeJdbcSetup {
 

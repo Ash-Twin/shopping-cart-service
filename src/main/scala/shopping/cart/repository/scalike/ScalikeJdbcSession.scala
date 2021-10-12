@@ -1,4 +1,4 @@
-package shopping.cart.repository
+package shopping.cart.repository.scalike
 
 import akka.japi.function.Function
 import akka.projection.jdbc.JdbcSession
