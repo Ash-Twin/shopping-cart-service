@@ -1,4 +1,4 @@
-## Running the sample code
+## Run the sample code
 
 1. Start a first node:
 
